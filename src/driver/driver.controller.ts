@@ -8,7 +8,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { Pagination } from 'src/dtos/pagination.dto';
+
 import { DriverService } from './driver.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
@@ -28,13 +28,9 @@ export class DriverController {
     return this.driverService.findAllDrivers();
   }
 
-  @Get('/page/filter')
-  async findAllPage(
-    @Query('nome') nome?: string,
-    @Query('size') size?: number,
-    @Query('page') page?: number,
-  ): Promise<Pagination<Driver[]>> {
-    return this.driverService.findAllPageFilter(nome, size, page);
+  @Get('/filter')
+  async findAllFilterName(@Query('nome') nome?: string): Promise<Driver[]> {
+    return this.driverService.findAllFilterName(nome);
   }
 
   @Get('/disponivel')

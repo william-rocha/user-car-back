@@ -4,8 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Pagination, PaginationMeta } from 'src/dtos/pagination.dto';
-import { DeleteResult, Like, Repository } from 'typeorm';
+import { DeleteResult, ILike, Repository } from 'typeorm';
 import { CreateCarDto } from './dto/create-car.dto';
 import { UpdateCarDto } from './dto/update-car.dto';
 import { Car } from './entities/car.entity';
@@ -13,9 +12,6 @@ import { StatusCar } from './enums/car.enum';
 
 @Injectable()
 export class CarService {
-  SIZE = 10;
-  PAGE = 1;
-
   constructor(
     @InjectRepository(Car)
     private readonly carRepository: Repository<Car>,
@@ -28,10 +24,6 @@ export class CarService {
 
   async findAllCars(): Promise<Car[]> {
     const cars = await this.carRepository.find();
-
-    if (!cars) {
-      throw new NotFoundException('Car não encontrados');
-    }
     return cars;
   }
 
@@ -41,43 +33,11 @@ export class CarService {
         createdAt: 'DESC',
       },
       where: {
-        cor: Like(`%${cor}%`),
-        marca: Like(`%${marca}%`),
+        cor: ILike(`%${cor}%`),
+        marca: ILike(`%${marca}%`),
       },
     });
     return carFilter;
-  }
-
-  async findAllPage(
-    cor?: string,
-    marca?: string,
-    size?: number,
-    page?: number,
-  ): Promise<Pagination<Car[]>> {
-    size = Number(size) || this.SIZE;
-    page = Number(page) || this.PAGE;
-
-    const [cars, total] = await this.carRepository.findAndCount({
-      order: {
-        createdAt: 'DESC',
-      },
-      where: {
-        cor: Like(`%${cor}%`),
-        marca: Like(`%${marca}%`),
-      },
-      skip: (page - 1) * size,
-      take: size,
-    });
-
-    return new Pagination(
-      new PaginationMeta(
-        Number(size),
-        total,
-        Number(page),
-        Math.ceil(total / size),
-      ),
-      cars,
-    );
   }
 
   async findCarById(carId: number): Promise<Car> {
@@ -103,20 +63,6 @@ export class CarService {
     });
   }
 
-  async updateWithoutRelationship(
-    id: number,
-    updateCar: UpdateCarDto,
-  ): Promise<void> {
-    const car = await this.findCarById(id);
-
-    car.utilizacoes = null;
-
-    this.carRepository.save({
-      ...car,
-      ...updateCar,
-    });
-  }
-
   async remove(carId: number): Promise<DeleteResult> {
     const car = await this.findCarById(carId);
     if (car.status == StatusCar.EM_USO) {
@@ -125,9 +71,7 @@ export class CarService {
       );
     }
 
-    await this.updateWithoutRelationship(car.id, car);
-
-    return this.carRepository.delete({ id: carId });
+    return this.carRepository.softDelete({ id: carId });
   }
 
   async findAvailableCars(): Promise<Car[]> {
@@ -139,4 +83,36 @@ export class CarService {
 
     return cars;
   }
+
+  // async findAllPage(
+  //   cor?: string,
+  //   marca?: string,
+  //   size?: number,
+  //   page?: number,
+  // ): Promise<Pagination<Car[]>> {
+  //   size = Number(size) || this.SIZE;
+  //   page = Number(page) || this.PAGE;
+
+  //   const [cars, total] = await this.carRepository.findAndCount({
+  //     order: {
+  //       createdAt: 'DESC',
+  //     },
+  //     where: {
+  //       cor: ILike(`%${cor}%`),
+  //       marca: ILike(`%${marca}%`),
+  //     },
+  //     skip: (page - 1) * size,
+  //     take: size,
+  //   });
+
+  //   return new Pagination(
+  //     new PaginationMeta(
+  //       Number(size),
+  //       total,
+  //       Number(page),
+  //       Math.ceil(total / size),
+  //     ),
+  //     cars,
+  //   );
+  // }
 }

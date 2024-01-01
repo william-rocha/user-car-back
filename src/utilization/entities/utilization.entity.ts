@@ -1,7 +1,3 @@
-// utilization.entity.ts
-
-import { Car } from 'src/car/entities/car.entity';
-import { Driver } from 'src/driver/entities/driver.entity';
 import {
   Column,
   CreateDateColumn,
@@ -10,6 +6,8 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Car } from '../../car/entities/car.entity';
+import { Driver } from '../../driver/entities/driver.entity';
 import { Status } from '../enum/status.enum';
 
 @Entity()
@@ -37,12 +35,12 @@ export class Utilization {
   @ManyToOne(() => Driver, (motorista) => motorista.utilizacoes, {
     cascade: ['insert', 'update'],
   })
-  @JoinColumn({ name: 'motorista_id' })
+  @JoinColumn({ name: 'motorista_id', referencedColumnName: 'id' })
   motorista?: Driver;
 
   @ManyToOne(() => Car, (carro) => carro.utilizacoes, {
     cascade: ['insert', 'update'],
   })
-  @JoinColumn({ name: 'carro_id' })
+  @JoinColumn({ name: 'carro_id', referencedColumnName: 'id' })
   carro?: Car;
 }

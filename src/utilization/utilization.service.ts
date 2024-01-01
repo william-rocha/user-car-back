@@ -6,13 +6,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { StatusCar } from 'src/car/enums/car.enum';
-import { StatusDriver } from 'src/driver/enum/status.enum';
+
 import { DeleteResult, Repository } from 'typeorm';
 import { CarService } from '../car/car.service';
+import { StatusCar } from '../car/enums/car.enum';
 import { DriverService } from '../driver/driver.service';
+import { StatusDriver } from '../driver/enum/status.enum';
 import { CreateUtilizationDto } from './dto/create-utilization.dto';
-import { UpdateUtilizationDto } from './dto/update-utilization.dto';
 import { Utilization } from './entities/utilization.entity';
 import { Status } from './enum/status.enum';
 
@@ -25,27 +25,36 @@ export class UtilizationService {
     private readonly driverService: DriverService,
   ) {}
 
+  async findAll(): Promise<Utilization[]> {
+    return this.utilizationRepository.find({
+      relations: {
+        carro: true,
+        motorista: true,
+      },
+      withDeleted: true,
+    });
+  }
+
   async createUtilization(
     createUtilization: CreateUtilizationDto,
   ): Promise<Utilization> {
-    // verifica se existe motorista
     const motorista = await this.driverService.findDriverById(
       createUtilization.driverId,
     );
-    // verifica se existe carro
+
     const carro = await this.carService.findCarById(createUtilization.carId);
 
     const isCarInUse = await this.isCarInUse(createUtilization.carId);
-
-    const isDriverInUse = await this.driverAlreadyUsingCar(
-      createUtilization.driverId,
-    );
 
     if (isCarInUse) {
       throw new BadRequestException(
         `Este Carro com id: ${carro.id} já está sendo utilizado por outro motorista`,
       );
     }
+
+    const isDriverInUse = await this.driverAlreadyUsingCar(
+      createUtilization.driverId,
+    );
 
     if (isDriverInUse) {
       throw new BadRequestException(`Este Carro já está utilizado um Carro`);
@@ -91,6 +100,10 @@ export class UtilizationService {
       status: Status.FINALIZADA,
       motorista,
       carro,
+      relations: {
+        carro: true,
+        motorista: true,
+      },
     });
   }
 
@@ -131,35 +144,6 @@ export class UtilizationService {
     return utilization || null;
   }
 
-  async findAll(): Promise<Utilization[]> {
-    return this.utilizationRepository.find({
-      relations: {
-        carro: true,
-        motorista: true,
-      },
-    });
-  }
-
-  async findUserCarById(userId: number): Promise<Utilization> {
-    const utilization = await this.utilizationRepository.findOne({
-      where: {
-        id: userId,
-      },
-    });
-    if (!utilization) {
-      throw new NotFoundException('Utilização não encontrada');
-    }
-    return utilization;
-  }
-
-  async update(
-    id: number,
-    updateUtilizationDto: UpdateUtilizationDto,
-  ): Promise<Utilization> {
-    await this.utilizationRepository.update(id, updateUtilizationDto);
-    return this.findUserCarById(id);
-  }
-
   async findUtilizationById(userId: number) {
     const driver = await this.utilizationRepository.findOne({
       where: {
@@ -179,9 +163,8 @@ export class UtilizationService {
   }
 
   async remove(userId: number): Promise<DeleteResult> {
-    const userCar = await this.findUtilizationById(userId);
-    const bodyCar = { ...userCar.carro, status: StatusCar.DISPONIVEL };
-    this.carService.update(userCar.carro.id, bodyCar);
+    await this.findUtilizationById(userId);
+
     return await this.utilizationRepository.delete({ id: userId });
   }
 }

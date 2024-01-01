@@ -1,13 +1,13 @@
-import { Utilization } from 'src/utilization/entities/utilization.entity';
-
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Utilization } from '../../utilization/entities/utilization.entity';
 import { StatusDriver } from '../enum/status.enum';
 
 @Entity()
@@ -34,4 +34,7 @@ export class Driver {
 
   @OneToMany(() => Utilization, (utilization) => utilization.motorista)
   utilizacoes?: Utilization[];
+
+  @DeleteDateColumn()
+  public deletedAt: Date;
 }
